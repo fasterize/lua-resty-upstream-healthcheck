@@ -491,6 +491,12 @@ check = function (premature, ctx)
         return
     end
 
+    if ctx.stop_checker_func and ctx.stop_checker_func() then
+        errlog("Stopping healthcheck for ", ctx.upstream)
+        update_upstream_checker_status(ctx.upstream, false)
+        return
+    end
+
     local ok, err = pcall(do_check, ctx)
     if not ok then
         errlog("failed to run healthcheck cycle: ", err)
@@ -582,6 +588,8 @@ function _M.spawn_checker(opts)
         rise = 2
     end
 
+    local stop_checker_func = opts.stop_checker_func
+
     local shm = opts.shm
     if not shm then
         return nil, "\"shm\" option required"
@@ -620,6 +628,7 @@ function _M.spawn_checker(opts)
         statuses = statuses,
         version = 0,
         concurrency = concur,
+        stop_checker_func = stop_checker_func,
     }
 
     local ok, err = new_timer(0, check, ctx)
