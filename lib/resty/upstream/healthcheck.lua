@@ -702,4 +702,58 @@ function _M.status_page()
     return concat(bits)
 end
 
+function gen_json_peers_status_info(peers, bits, idx)
+  local npeers = #peers
+  for i = 1, npeers do
+      local peer = peers[i]
+      local status = peer.down and "down" or "up"
+      bits[idx] = string.format("\"%s\":\"%s\"%s", peer.name, status, i == npeers and "" or ",")
+      idx = idx + 1
+  end
+  return idx
+end
+
+function _M.json_status()
+    local upstreams, err = get_upstreams()
+    if not upstreams then
+        return "failed to get upstream names: " .. err
+    end
+
+    local n = #upstreams
+    local bits = new_tab(n * 20, 0)
+    local idx = 1
+    bits[idx] = '{'
+    idx = idx + 1
+    for i = 1, n do
+        local upstream = upstreams[i]
+        local ncheckers = upstream_checker_statuses[upstream]
+        local has_checkers = not (not ncheckers or ncheckers == 0)
+
+        bits[idx] = string.format("\"%s\":{\"has_checker\":%s,\"primary_peers\":{", upstream, tostring(has_checkers))
+        idx = idx + 1
+
+        local peers, err = get_primary_peers(upstream)
+        if not peers then
+            return "failed to get primary peers in upstream " .. u .. ": "
+                   .. err
+        end
+        idx = gen_json_peers_status_info(peers, bits, idx)
+
+        bits[idx] = string.format("},\"backup_peers\":{")
+        idx = idx + 1
+
+        peers, err = get_backup_peers(upstream)
+        if not peers then
+            return "failed to get backup peers in upstream " .. u .. ": "
+                   .. err
+        end
+        idx = gen_json_peers_status_info(peers, bits, idx)
+        bits[idx] = "}}"
+        bits[idx + 1] = i == n and "" or ","
+        idx = idx + 2
+    end
+    bits[idx] = '}'
+    return concat(bits)
+end
+
 return _M
