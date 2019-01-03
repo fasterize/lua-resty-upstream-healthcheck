@@ -225,7 +225,7 @@ local function check_peer(ctx, id, peer, is_backup)
 
     if peer.host then
         -- print("peer port: ", peer.port)
-        ok, err = sock:connect(peer.host, peer.port)
+        ok, err = sock:connect(peer.host, ctx.forced_peer_port or peer.port)
     else
         ok, err = sock:connect(name)
     end
@@ -620,6 +620,7 @@ function _M.spawn_checker(opts)
         statuses = statuses,
         version = 0,
         concurrency = concur,
+        forced_peer_port = opts.forced_peer_port,
     }
 
     local ok, err = new_timer(0, check, ctx)
