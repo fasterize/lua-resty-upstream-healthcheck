@@ -145,6 +145,9 @@ local function peer_fail(ctx, is_backup, id, peer)
                 " failure(s)")
         peer.down = true
         set_peer_down_globally(ctx, is_backup, id, true)
+        if ctx.status_handler then
+          ctx.status_handler(peer)
+        end
     end
 end
 
@@ -198,6 +201,9 @@ local function peer_ok(ctx, is_backup, id, peer)
                 " success(es)")
         peer.down = nil
         set_peer_down_globally(ctx, is_backup, id, nil)
+        if ctx.status_handler then
+          ctx.status_handler(peer)
+        end
     end
 end
 
@@ -591,6 +597,7 @@ function _M.spawn_checker(opts)
     if not dict then
         return nil, "shm \"" .. tostring(shm) .. "\" not found"
     end
+    dict:flush_all()
 
     local u = opts.upstream
     if not u then
@@ -621,6 +628,7 @@ function _M.spawn_checker(opts)
         version = 0,
         concurrency = concur,
         forced_peer_port = opts.forced_peer_port,
+        status_handler = opts.status_handler
     }
 
     local ok, err = new_timer(0, check, ctx)
